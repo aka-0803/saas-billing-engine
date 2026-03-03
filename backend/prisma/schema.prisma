@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model Tenant {
+  id            Int      @id @default(autoincrement())
+  name          String
+  created_at    DateTime @default(now())
+  modified_time DateTime @updatedAt
+  is_deleted    Int      @default(0)
+
+  users         User[]
+  subscriptions Subscription[]
+  invoices      Invoice[]
+  usage_records UsageRecord[]
+}
+
+model User {
+  id            Int      @id @default(autoincrement())
+  email         String   @unique
+  password      String
+  role          String
+  tenant_id     Int
+  created_at    DateTime @default(now())
+  modified_time DateTime @updatedAt
+  is_deleted    Int      @default(0)
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
+}
+
+model Plan {
+  id            Int      @id @default(autoincrement())
+  name          String
+  price         Float
+  usage_limit   Int
+  created_at    DateTime @default(now())
+  modified_time DateTime @updatedAt
+  is_deleted    Int      @default(0)
+
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id            Int      @id @default(autoincrement())
+  tenant_id     Int
+  plan_id       Int
+  start_date    DateTime
+  end_date      DateTime
+  status        String
+  current_usage Int      @default(0)
+  created_at    DateTime @default(now())
+  modified_time DateTime @updatedAt
+  is_deleted    Int      @default(0)
+
+  tenant        Tenant        @relation(fields: [tenant_id], references: [id])
+  plan          Plan          @relation(fields: [plan_id], references: [id])
+  invoices      Invoice[]
+  usage_records UsageRecord[]
+}
+
+model UsageRecord {
+  id              Int      @id @default(autoincrement())
+  tenant_id       Int
+  subscription_id Int
+  usage_count     Int
+  recorded_at     DateTime @default(now())
+  is_deleted      Int      @default(0)
+  created_at      DateTime @default(now())
+  modified_time   DateTime @updatedAt
+
+  tenant       Tenant       @relation(fields: [tenant_id], references: [id])
+  subscription Subscription @relation(fields: [subscription_id], references: [id])
+}
+
+model Invoice {
+  id                   Int      @id @default(autoincrement())
+  tenant_id            Int
+  subscription_id      Int
+  amount               Float
+  billing_period_start DateTime
+  billing_period_end   DateTime
+  status               String
+  is_deleted           Int      @default(0)
+  created_at           DateTime @default(now())
+  modified_time        DateTime @updatedAt
+
+  tenant       Tenant       @relation(fields: [tenant_id], references: [id])
+  subscription Subscription @relation(fields: [subscription_id], references: [id])
+}
