@@ -1,49 +1,57 @@
-import { Injectable } from "@nestjs/common";
-import { PrismaService } from "src/prisma/prisma.service";
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class SubscriptionService {
-    constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
-    async create(tenant_id: number, plan_id: number) {
-        const start = new Date();
-        const end = new Date();
-        end.setMonth(end.getMonth() + 1);
+  async create(tenant_id: number, plan_id: number) {
+    const start = new Date();
+    const end = new Date();
+    end.setMonth(end.getMonth() + 1);
 
-        return this.prisma.subscription.create({
-            data: {
-                tenant_id,
-                plan_id,
-                start_date: start,
-                end_date: end,
-                status: 'ACTIVE',
-            },
-        });
+    return this.prisma.subscription.create({
+      data: {
+        tenant_id,
+        plan_id,
+        start_date: start,
+        end_date: end,
+        status: 'ACTIVE',
+      },
+    });
+  }
+
+  async incrementUsage(subscription_id: number, amount: number) {
+    const subscription = await this.prisma.subscription.findUnique({
+      where: { id: subscription_id },
+      include: { plan: true },
+    });
+
+    if (!subscription) throw new Error('Subscription not found');
+
+    const newUsage = subscription.current_usage + amount;
+
+    let overage = 0;
+    if (newUsage > subscription.plan.usage_limit) {
+      overage = newUsage - subscription.plan.usage_limit;
     }
 
-    async incrementUsage(subscription_id: number, amount: number) {
-        const subscription = await this.prisma.subscription.findUnique({
-            where: { id: subscription_id },
-            include: { plan: true },
-        });
+    await this.prisma.subscription.update({
+      where: { id: subscription_id },
+      data: { current_usage: newUsage },
+    });
 
-        if (!subscription) throw new Error('Subscription not found');
+    await this.prisma.usageRecord.create({
+      data: {
+        tenant_id: subscription.tenant_id,
+        subscription_id: subscription_id,
+        usage_count: amount,
+      },
+    });
 
-        const newUsage = subscription.current_usage + amount;
-
-        let overage = 0;
-        if (newUsage > subscription.plan.usage_limit) {
-            overage = newUsage - subscription.plan.usage_limit;
-        }
-
-        await this.prisma.subscription.update({
-            where: { id: subscription_id },
-            data: { current_usage: newUsage },
-        });
-
-        return {
-            current_usage: newUsage,
-            overage,
-        };
-    }
+    return {
+      current_usage: newUsage,
+      overage,
+    };
+  }
 }
