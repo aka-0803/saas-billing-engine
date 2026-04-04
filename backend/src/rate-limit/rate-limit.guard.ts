@@ -10,7 +10,7 @@ import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class RateLimitGuard implements CanActivate {
-  private readonly LIMIT = 100;
+  private readonly LIMIT = 2;
   private readonly WINDOW_SECONDS = 60;
 
   constructor(private readonly redis: RedisService) {}
@@ -22,7 +22,8 @@ export class RateLimitGuard implements CanActivate {
     const key = `rate-limit:tenant:${tenantId}`;
 
     const currentCount = await this.redis.incr(key);
-    if (currentCount === 1) {
+
+    if (currentCount == 1) {
       await this.redis.expire(key, this.WINDOW_SECONDS);
     }
     if (currentCount > this.LIMIT) {

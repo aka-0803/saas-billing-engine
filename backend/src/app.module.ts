@@ -6,10 +6,12 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { BillingModule } from './billing/billing.module';
 import { PaymentsModule } from './payments/payments.module';
 import { SubscriptionModule } from './subscription/subscription.module';
+import { RateLimitModule } from './rate-limit/rate-limit.module';
 
 @Module({
   imports: [
     PrismaModule,
+    RateLimitModule,
     TenantModule,
     PlanModule,
     ScheduleModule.forRoot(),

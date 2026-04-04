@@ -6,7 +6,7 @@ import 'dotenv/config';
 export class AppService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getHello(){
+  async getHello() {
     return `server is running on ${process.env.PORT}`;
   }
 }
