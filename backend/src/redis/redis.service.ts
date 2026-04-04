@@ -19,4 +19,12 @@ export class RedisService {
   async set(key: string, value: any, ttl: number) {
     return this.client.set(key, JSON.stringify(value), 'EX', ttl);
   }
+
+  async incr(key: string) {
+    return this.client.incr(key);
+  }
+
+  async expire(key: string, seconds: number) {
+    return this.client.expire(key, seconds);
+  }
 }

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { RedisService } from 'src/redis/redis.service';
+import { ISubscription } from './interfaces/subscription.interface';
 
 @Injectable()
 export class SubscriptionService {
@@ -59,13 +60,13 @@ export class SubscriptionService {
     };
   }
 
-  async getSubscription(id: number) {
+  async getSubscription(id: number): Promise<ISubscription | null> {
     const cacheKey = `sub:${id}`;
 
     const cached = await this.redis.get(cacheKey);
 
     if (cached) {
-      return JSON.parse(cached);
+      return JSON.parse(cached) as ISubscription;
     }
 
     const subscription = await this.prisma.subscription.findUnique({
@@ -74,6 +75,6 @@ export class SubscriptionService {
 
     await this.redis.set(cacheKey, subscription, 300);
 
-    return subscription;
+    return subscription as ISubscription | null;
   }
 }

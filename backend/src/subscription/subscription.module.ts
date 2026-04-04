@@ -2,9 +2,10 @@ import { Module } from "@nestjs/common";
 import { SubscriptionController } from "./subscription.controller";
 import { SubscriptionService } from "./subscription.service";
 import { PrismaModule } from "src/prisma/prisma.module";
+import { RedisModule } from "src/redis/redis.module";
 
 @Module({
-    imports: [PrismaModule],
+    imports: [PrismaModule, RedisModule],
     controllers: [SubscriptionController],
     providers: [SubscriptionService],
 })
