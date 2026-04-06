@@ -10,7 +10,7 @@ import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class RateLimitGuard implements CanActivate {
-  private readonly LIMIT = 2;
+  private readonly LIMIT = 100;
   private readonly WINDOW_SECONDS = 60;
 
   constructor(private readonly redis: RedisService) {}

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
@@ -10,9 +10,11 @@ export class PaymentsService {
       where: { id: invoiceId },
     });
 
-    if (!invoice) throw new Error('Invoice not found');
+    if (!invoice) {
+      throw new NotFoundException(`Invoice ${invoiceId} not found`);
+    }
 
-    // idempotency protection
+    // Idempotency: return as-is if already paid
     if (invoice.status === 'PAID') {
       return invoice;
     }

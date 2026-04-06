@@ -1,5 +1,12 @@
-import { Controller, Post, Get, Param, Body } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+} from '@nestjs/common';
+import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { SubscriptionService } from './subscription.service';
 import {
   CreateSubscriptionDto,
@@ -25,6 +32,15 @@ export class SubscriptionController {
       dto.subscription_id,
       dto.amount,
     );
+  }
+
+  @Post('renew/:id')
+  @ApiOperation({
+    summary: 'Renew a subscription: invoice the completed period, roll dates forward, reset usage',
+  })
+  @ApiParam({ name: 'id', description: 'Subscription ID', example: 1 })
+  async renew(@Param('id', ParseIntPipe) id: number) {
+    return this.subscriptionService.renewSubscription(id);
   }
 
   @Get(':id')
