@@ -7,6 +7,7 @@ import { BillingModule } from './billing/billing.module';
 import { PaymentsModule } from './payments/payments.module';
 import { SubscriptionModule } from './subscription/subscription.module';
 import { RateLimitModule } from './rate-limit/rate-limit.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { RateLimitModule } from './rate-limit/rate-limit.module';
     BillingModule,
     PaymentsModule,
     SubscriptionModule,
+    UserModule,
   ],
 })
 export class AppModule {}

@@ -21,7 +21,7 @@ export class PaymentsService {
 
     return this.prisma.invoice.update({
       where: { id: invoiceId },
-      data: { status: 'PAID' },
+      data: { status: 'PAID', modified_time: new Date() },
     });
   }
 }

@@ -9,7 +9,9 @@ export class PaymentsController {
   constructor(private paymentsService: PaymentsService) {}
 
   @Post('webhook')
-  @ApiOperation({ summary: 'Simulate a payment webhook to mark an invoice as paid' })
+  @ApiOperation({
+    summary: 'Simulate a payment webhook to mark an invoice as paid',
+  })
   simulatePayment(@Body() dto: SimulatePaymentDto) {
     return this.paymentsService.markInvoicePaid(dto.invoice_id);
   }
