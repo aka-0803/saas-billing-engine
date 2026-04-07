@@ -84,10 +84,6 @@ export class SubscriptionService {
     return subscription as ISubscription | null;
   }
 
-  /**
-   * Delegates renewal to BillingService:
-   * invoices the completed period → rolls dates forward → resets usage.
-   */
   async renewSubscription(id: number) {
     // Invalidate cache after renewal
     const result = await this.billingService.processRenewal(id);

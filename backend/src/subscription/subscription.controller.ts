@@ -36,7 +36,8 @@ export class SubscriptionController {
 
   @Post('renew/:id')
   @ApiOperation({
-    summary: 'Renew a subscription: invoice the completed period, roll dates forward, reset usage',
+    summary:
+      'Renew a subscription: invoice the completed period, roll dates forward, reset usage',
   })
   @ApiParam({ name: 'id', description: 'Subscription ID', example: 1 })
   async renew(@Param('id', ParseIntPipe) id: number) {
