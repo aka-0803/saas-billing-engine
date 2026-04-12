@@ -8,6 +8,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { SubscriptionModule } from './subscription/subscription.module';
 import { RateLimitModule } from './rate-limit/rate-limit.module';
 import { UserModule } from './user/user.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { UserModule } from './user/user.module';
     PaymentsModule,
     SubscriptionModule,
     UserModule,
+    AuthModule,
   ],
 })
 export class AppModule {}

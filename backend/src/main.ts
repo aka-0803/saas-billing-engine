@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ValidationPipe } from '@nestjs/common';
 import { RateLimitGuard } from './rate-limit/rate-limit.guard';
 
 async function bootstrap() {
@@ -10,6 +11,7 @@ async function bootstrap() {
     .setTitle('SaaS Billing Engine')
     .setDescription('API documentation for the SaaS Billing Engine')
     .setVersion('1.0')
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -17,6 +19,14 @@ async function bootstrap() {
 
   const rateLimitGuard = app.get(RateLimitGuard);
   app.useGlobalGuards(rateLimitGuard);
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
 
   app.enableShutdownHooks();
 
