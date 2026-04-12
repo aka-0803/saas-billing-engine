@@ -54,8 +54,10 @@ export class UserService {
     if (existing)
       throw new ConflictException(`Email ${data.email} already in use`);
 
+    const hashed = await bcrypt.hash(data.password, 10);
+
     return this.prisma.user.create({
-      data: { ...data, role: data.role ?? 'member' },
+      data: { ...data, password: hashed, role: data.role ?? 'member' },
       select: USER_SELECT,
     });
   }
