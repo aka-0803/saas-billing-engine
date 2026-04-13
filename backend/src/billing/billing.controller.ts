@@ -5,12 +5,16 @@ import {
   ParseIntPipe,
   Post,
   Res,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { BillingService } from './billing.service';
 
 @ApiTags('Billing')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('billing')
 export class BillingController {
   constructor(private billingService: BillingService) {}

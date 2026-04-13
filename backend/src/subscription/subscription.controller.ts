@@ -5,8 +5,10 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { SubscriptionService } from './subscription.service';
 import {
   CreateSubscriptionDto,
@@ -15,6 +17,8 @@ import {
 import { ISubscription } from './interfaces/subscription.interface';
 
 @ApiTags('Subscriptions')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('subscription')
 export class SubscriptionController {
   constructor(private readonly subscriptionService: SubscriptionService) {}
