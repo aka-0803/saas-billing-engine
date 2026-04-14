@@ -33,13 +33,14 @@ model User {
 }
 
 model Plan {
-  id            Int      @id @default(autoincrement())
-  name          String
-  price         Float
-  usage_limit   Int
-  created_at    DateTime @default(now())
-  modified_time DateTime @updatedAt
-  is_deleted    Int      @default(0)
+  id                    Int      @id @default(autoincrement())
+  name                  String
+  price                 Float
+  usage_limit           Int
+  rate_limit_per_minute Int      @default(60)
+  created_at            DateTime @default(now())
+  modified_time         DateTime @updatedAt
+  is_deleted            Int      @default(0)
 
   subscriptions Subscription[]
 }
