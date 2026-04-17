@@ -14,7 +14,7 @@ export class PlanController {
   @Post()
   @ApiOperation({ summary: 'Create a new plan' })
   async create(@Body() dto: CreatePlanDto) {
-    return this.planService.create(dto.name, dto.price, dto.usage_limit);
+    return this.planService.create(dto.name, dto.price, dto.usage_limit, dto.rate_limit_per_minute);
   }
 
   @Get()

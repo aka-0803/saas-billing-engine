@@ -64,6 +64,33 @@ export class SubscriptionService {
     };
   }
 
+  async recordUsageForTenant(tenant_id: number, amount: number) {
+    const subscription = await this.prisma.subscription.findFirst({
+      where: { tenant_id, status: 'ACTIVE', is_deleted: 0 },
+      include: { plan: true },
+    });
+
+    if (!subscription) return;
+
+    const newUsage = subscription.current_usage + amount;
+    const overage = Math.max(0, newUsage - subscription.plan.usage_limit);
+
+    await this.prisma.subscription.update({
+      where: { id: subscription.id },
+      data: { current_usage: newUsage },
+    });
+
+    await this.prisma.usageRecord.create({
+      data: {
+        tenant_id,
+        subscription_id: subscription.id,
+        usage_count: amount,
+      },
+    });
+
+    return { current_usage: newUsage, overage };
+  }
+
   async getSubscription(id: number): Promise<ISubscription | null> {
     const cacheKey = `sub:${id}`;
 

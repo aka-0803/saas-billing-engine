@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import { RateLimitGuard } from './rate-limit/rate-limit.guard';
+import { UsageInterceptor } from './subscription/usage.interceptor';
 
 const REQUIRED_ENV = ['DATABASE_URL', 'JWT_SECRET', 'REDIS_HOST', 'REDIS_PORT'];
 
@@ -33,6 +34,9 @@ async function bootstrap() {
 
   const rateLimitGuard = app.get(RateLimitGuard);
   app.useGlobalGuards(rateLimitGuard);
+
+  const usageInterceptor = app.get(UsageInterceptor);
+  app.useGlobalInterceptors(usageInterceptor);
 
   app.useGlobalPipes(
     new ValidationPipe({
