@@ -1,5 +1,10 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Body, Controller, Headers, Post, UseGuards } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiHeader,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { PaymentsService } from './payments.service';
 import { SimulatePaymentDto } from './dto/payments.dto';
@@ -15,7 +20,15 @@ export class PaymentsController {
   @ApiOperation({
     summary: 'Simulate a payment webhook to mark an invoice as paid',
   })
-  simulatePayment(@Body() dto: SimulatePaymentDto) {
-    return this.paymentsService.markInvoicePaid(dto.invoice_id);
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    description: 'Unique key to prevent duplicate payment processing',
+    required: false,
+  })
+  simulatePayment(
+    @Body() dto: SimulatePaymentDto,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    return this.paymentsService.markInvoicePaid(dto.invoice_id, idempotencyKey);
   }
 }

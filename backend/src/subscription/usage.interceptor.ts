@@ -17,15 +17,18 @@ export class UsageInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap(() => {
         const request = context.switchToHttp().getRequest<Request>();
-        const tenantId = parseInt(request.headers['x-tenant-id'] as string, 10);
+        const user = request.user as
+          | { userId: number; tenantId: number }
+          | undefined;
 
-        if (!isNaN(tenantId)) {
-          this.subscriptionService
-            .recordUsageForTenant(tenantId, 1)
-            .catch(() => {
-              // silently ignore — usage tracking must not break the response
-            });
-        }
+        // Skip auth routes — no JWT user context on signup/login
+        if (!user?.tenantId) return;
+
+        this.subscriptionService
+          .recordUsageForTenant(user.tenantId, 1)
+          .catch(() => {
+            // silently ignore — usage tracking must not break the response
+          });
       }),
     );
   }

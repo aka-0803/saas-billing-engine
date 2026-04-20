@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { PrismaModule } from './prisma/prisma.module';
 import { TenantModule } from './tenant/tenant.module';
 import { PlanModule } from './plan/plan.module';
@@ -9,6 +10,7 @@ import { SubscriptionModule } from './subscription/subscription.module';
 import { RateLimitModule } from './rate-limit/rate-limit.module';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
+import { UsageInterceptor } from './subscription/usage.interceptor';
 
 @Module({
   imports: [
@@ -22,6 +24,12 @@ import { AuthModule } from './auth/auth.module';
     SubscriptionModule,
     UserModule,
     AuthModule,
+  ],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: UsageInterceptor,
+    },
   ],
 })
 export class AppModule {}
