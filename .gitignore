@@ -25,3 +25,4 @@ lerna-debug.log*
 
 # Private project context (not for public repo)
 project-context.md
+PROJECT_CONTEXT.md
