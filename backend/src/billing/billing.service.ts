@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
+import { RedisService } from '../redis/redis.service';
 import PDFDocument from 'pdfkit';
 
 const OVERAGE_RATE = 2;
@@ -12,7 +13,10 @@ export enum InvoiceStatus {
 
 @Injectable()
 export class BillingService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private redis: RedisService,
+  ) {}
 
   /**
    * Generates a PENDING invoice for a subscription based on its current
@@ -76,6 +80,9 @@ export class BillingService {
         status: 'ACTIVE',
       },
     });
+
+    // Invalidate cached subscription so next read reflects renewed state
+    await this.redis.del(`sub:${subscriptionId}`);
 
     return { invoice, subscription };
   }

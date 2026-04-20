@@ -27,4 +27,8 @@ export class RedisService {
   async expire(key: string, seconds: number) {
     return this.client.expire(key, seconds);
   }
+
+  async del(key: string) {
+    return this.client.del(key);
+  }
 }
