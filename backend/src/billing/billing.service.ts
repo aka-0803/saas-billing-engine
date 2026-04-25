@@ -1,7 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
+import { S3Service } from '../storage/s3.service';
+import { INVOICE_QUEUE } from './billing.constants';
 import PDFDocument from 'pdfkit';
 
 const OVERAGE_RATE = 2;
@@ -16,12 +24,14 @@ export class BillingService {
   constructor(
     private prisma: PrismaService,
     private redis: RedisService,
+    private s3: S3Service,
+    @InjectQueue(INVOICE_QUEUE) private invoiceQueue: Queue,
   ) {}
 
   /**
-   * Generates a PENDING invoice for a subscription based on its current
-   * usage and billing period dates. Called on subscription creation,
-   * manual renewal, and the daily billing cron.
+   * Creates a PENDING invoice row, then enqueues a background job to
+   * generate the PDF and upload it to S3. Returns immediately — the
+   * caller does not wait for the PDF to be ready.
    */
   async generateInvoice(subscriptionId: number) {
     const sub = await this.prisma.subscription.findUnique({
@@ -36,7 +46,7 @@ export class BillingService {
     const overage = Math.max(0, sub.current_usage - sub.plan.usage_limit);
     const amount = sub.plan.price + overage * OVERAGE_RATE;
 
-    return this.prisma.invoice.create({
+    const invoice = await this.prisma.invoice.create({
       data: {
         tenant_id: sub.tenant_id,
         subscription_id: sub.id,
@@ -46,13 +56,22 @@ export class BillingService {
         status: InvoiceStatus.PENDING,
       },
     });
+
+    // Enqueue PDF generation — non-blocking, retried on failure
+    await this.invoiceQueue.add(
+      'generate-pdf',
+      { invoiceId: invoice.id },
+      {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2000 }, // 2s → 4s → 8s
+        removeOnComplete: true,
+        removeOnFail: false, // keep failed jobs visible for debugging
+      },
+    );
+
+    return invoice;
   }
 
-  /**
-   * Industry-standard renewal: invoice the completed period (with actual
-   * usage), then roll the subscription forward and reset usage.
-   * Sequence matters — invoice always reflects the period it covers.
-   */
   async processRenewal(subscriptionId: number) {
     const sub = await this.prisma.subscription.findUnique({
       where: { id: subscriptionId },
@@ -62,15 +81,12 @@ export class BillingService {
       throw new NotFoundException(`Subscription ${subscriptionId} not found`);
     }
 
-    // 1. Invoice the completed period using current usage/dates
     const invoice = await this.generateInvoice(subscriptionId);
 
-    // 2. Roll billing period forward
     const newStart = sub.end_date;
     const newEnd = new Date(sub.end_date);
     newEnd.setMonth(newEnd.getMonth() + 1);
 
-    // 3. Reset usage for the new period
     const subscription = await this.prisma.subscription.update({
       where: { id: subscriptionId },
       data: {
@@ -81,16 +97,11 @@ export class BillingService {
       },
     });
 
-    // Invalidate cached subscription so next read reflects renewed state
     await this.redis.del(`sub:${subscriptionId}`);
 
     return { invoice, subscription };
   }
 
-  /**
-   * Daily cron (industry standard: check end_date <= today instead of
-   * running only on the 1st). Catches subscriptions expiring on any day.
-   */
   @Cron('0 0 * * *')
   async runBillingCycle() {
     const today = new Date();
@@ -111,10 +122,35 @@ export class BillingService {
   }
 
   /**
-   * Generates and returns a PDF buffer for an invoice.
-   * Includes tenant info, plan, line items (base + overage), total, and period.
+   * Returns a 15-minute pre-signed S3 URL for the invoice PDF.
+   * Throws 400 if the background worker hasn't uploaded the PDF yet.
    */
-  async downloadInvoice(invoiceId: number): Promise<Buffer> {
+  async getInvoiceDownloadUrl(
+    invoiceId: number,
+  ): Promise<{ download_url: string }> {
+    const invoice = await this.prisma.invoice.findUnique({
+      where: { id: invoiceId },
+    });
+
+    if (!invoice) {
+      throw new NotFoundException(`Invoice ${invoiceId} not found`);
+    }
+
+    if (!invoice.pdf_url) {
+      throw new BadRequestException(
+        'PDF not ready yet — generation is in progress, try again in a few seconds',
+      );
+    }
+
+    const download_url = await this.s3.getPresignedUrl(invoice.pdf_url);
+    return { download_url };
+  }
+
+  /**
+   * Used internally by InvoiceProcessor to generate the raw PDF buffer.
+   * Kept separate from the download endpoint so the worker can reuse it.
+   */
+  async buildPdfBuffer(invoiceId: number): Promise<Buffer> {
     const invoice = await this.prisma.invoice.findUnique({
       where: { id: invoiceId },
       include: {
@@ -145,7 +181,6 @@ export class BillingService {
 
     const doc = new PDFDocument({ margin: 50 });
 
-    // ── Header ──────────────────────────────────────────────────
     doc
       .fontSize(20)
       .font('Helvetica-Bold')
@@ -161,10 +196,8 @@ export class BillingService {
       })
       .text(`Date: ${formatDate(invoice.created_at)}`, { align: 'right' });
 
-    // ── Divider ──────────────────────────────────────────────────
     doc.moveDown(1).moveTo(50, doc.y).lineTo(560, doc.y).stroke();
 
-    // ── Billed To ────────────────────────────────────────────────
     doc
       .moveDown(0.8)
       .fontSize(11)
@@ -175,7 +208,6 @@ export class BillingService {
       .text(`Tenant: ${tenant.name}`)
       .text(`Plan:   ${plan.name}`);
 
-    // ── Line Items ───────────────────────────────────────────────
     doc.moveDown(1).moveTo(50, doc.y).lineTo(560, doc.y).stroke();
 
     const tableTop = doc.y + 10;
@@ -206,7 +238,6 @@ export class BillingService {
         );
     }
 
-    // ── Total ────────────────────────────────────────────────────
     doc.moveDown(0.8).moveTo(50, doc.y).lineTo(560, doc.y).stroke();
 
     doc
@@ -215,7 +246,6 @@ export class BillingService {
       .text('TOTAL', 50, doc.y)
       .text(formatCurrency(amount), 460, doc.y - doc.currentLineHeight());
 
-    // ── Footer ───────────────────────────────────────────────────
     doc.moveDown(1).moveTo(50, doc.y).lineTo(560, doc.y).stroke();
 
     doc
@@ -229,15 +259,10 @@ export class BillingService {
 
     doc.end();
 
-    // Collect stream chunks using async iteration (no Promise constructor)
     const chunks: Buffer[] = [];
-    try {
-      for await (const chunk of doc) {
-        chunks.push(Buffer.from(chunk as Buffer));
-      }
-      return Buffer.concat(chunks);
-    } catch (err) {
-      throw new Error(`PDF generation failed: ${(err as Error).message}`);
+    for await (const chunk of doc) {
+      chunks.push(Buffer.from(chunk as Buffer));
     }
+    return Buffer.concat(chunks);
   }
 }
