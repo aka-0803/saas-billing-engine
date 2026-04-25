@@ -4,11 +4,14 @@ import {
   Param,
   ParseIntPipe,
   Post,
-  Res,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import { Response } from 'express';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { BillingService } from './billing.service';
 
@@ -20,7 +23,10 @@ export class BillingController {
   constructor(private billingService: BillingService) {}
 
   @Post('generate-invoice/:subscriptionId')
-  @ApiOperation({ summary: 'Generate an invoice for a subscription' })
+  @ApiOperation({
+    summary:
+      'Generate an invoice for a subscription (PDF created in background)',
+  })
   @ApiParam({
     name: 'subscriptionId',
     description: 'Subscription ID',
@@ -42,18 +48,12 @@ export class BillingController {
   }
 
   @Get('invoice/:id/download')
-  @ApiOperation({ summary: 'Download an invoice as a PDF file' })
+  @ApiOperation({
+    summary:
+      'Get a pre-signed S3 URL to download the invoice PDF (valid 15 minutes)',
+  })
   @ApiParam({ name: 'id', description: 'Invoice ID', example: 1 })
-  async downloadInvoice(
-    @Param('id', ParseIntPipe) id: number,
-    @Res() res: Response,
-  ) {
-    const buffer = await this.billingService.downloadInvoice(id);
-    res.set({
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="invoice-${id}.pdf"`,
-      'Content-Length': buffer.length,
-    });
-    res.end(buffer);
+  getInvoiceDownloadUrl(@Param('id', ParseIntPipe) id: number) {
+    return this.billingService.getInvoiceDownloadUrl(id);
   }
 }

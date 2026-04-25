@@ -5,7 +5,16 @@ import { ValidationPipe } from '@nestjs/common';
 import { RateLimitGuard } from './rate-limit/rate-limit.guard';
 import { UsageInterceptor } from './subscription/usage.interceptor';
 
-const REQUIRED_ENV = ['DATABASE_URL', 'JWT_SECRET', 'REDIS_HOST', 'REDIS_PORT'];
+const REQUIRED_ENV = [
+  'DATABASE_URL',
+  'JWT_SECRET',
+  'REDIS_HOST',
+  'REDIS_PORT',
+  'AWS_ACCESS_KEY_ID',
+  'AWS_SECRET_ACCESS_KEY',
+  'AWS_REGION',
+  'S3_BUCKET_NAME',
+];
 
 function validateEnv() {
   const missing = REQUIRED_ENV.filter((key) => !process.env[key]);
