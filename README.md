@@ -269,23 +269,13 @@ Subscription lookups happen on every rate-limit check and usage increment. TTL 3
 The invoice must reflect the period it covers. Rolling dates first would make the invoice show future dates against past usage.
 
 **Why idempotency key on payments?**
-Payment webhooks are retried by providers on network failure. Without deduplication the same webhook would double-pay.
+Payment webhooks are retried by providers on network failure. Without deduplication, the same webhook would double-pay.
 
 **Why INVOICE_QUEUE constant in `billing.constants.ts`?**
 If the constant lived in `billing.module.ts`, the circular import (`BillingModule` → `BillingService` → queue token → `BillingModule`) would crash NestJS at startup.
 
 **Why MySQL on RDS, not in Docker Compose?**
 If EC2 dies, RDS data survives. Running MySQL in Compose ties DB lifecycle to the instance.
-
----
-
-## Migrations
-
-| Migration | Description |
-|-----------|-------------|
-| `20260302190356_init` | Initial schema — Tenant, User, Plan, Subscription, UsageRecord, Invoice |
-| `20260413190806_add_rate_limit_per_minute_to_plan` | Added `rate_limit_per_minute` to Plan |
-| `20260424170007_add_pdf_url_to_invoice` | Added `pdf_url String?` to Invoice |
 
 ---
 
